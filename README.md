@@ -42,10 +42,40 @@ Figure 3
 If a developer is working sufficiently close to the top of the tech stack (a leaf is the top in this case), then the only modules that need to be added to a workflow is itself and its descendants. In *figure 3* **module 5** is the only module with a dev change for this example JIRA task. *intellidjent* will create a workflow that ingests master SNAPSHOTs as **module 5** and **module 10's** ancestors and create an isolated development SNAPSHOT of **module 5** and **module 10** so that other intellidjent workflows are not aware of the development changes being made. Focusing on `3 -> 5 -> 10`, the reactive build looks like *figure 4* below.
 
 Figure 4
+
 ![figure4]
 
+
+
+
+#### Development Situation Two
+Figure 5
+![figure5]
+
+If a developer is working near the root of the maven ancestry or across multiple modules, she must be aware of possible side-effects that can occur far away in the descendants. Passivity can only be guaranteed if all consumers are tested. This situation requires that all descendants of **module 1** are rebuilt with that new SNAPSHOT and proper integration testing is ran. At this point, the only module that is not isolated from master is **module 0**.
+
+
+## Project Components
+
+#### 1. Github Org Retrieval
+
+**Purpose:**
+Pull all Maven based projects and build full dependency graph of module repositories.
+
+#### 2. Elementary Jenkins Definition
+
+**Purpose:**
+Setup build environment, maven configuration, and other Jenkins node necessities.
+
+#### 3. intellidjent Jenkins Definition
+
+**Purpose:**
+Links the elementary Jenkins module jobs together in a workflow that builds the necessary Maven modules
+
+This will contain all of the important project logic for deciding the reactive build pipeline.
 
 [plain]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test.png
 [figure2]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_one_node_with_two_sources.png
 [figure3]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_with_dev_2_colors.png
 [figure4]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/Jenkins-Reaction.png
+[figure5]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_with_dev_colors.png

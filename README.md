@@ -84,4 +84,4 @@ This will contain all of the important project logic for deciding the reactive b
 [figure3]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_with_dev_2_colors.png
 [figure4]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/Jenkins-Reaction.png
 [figure5]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_with_dev_colors.png
-[figure6]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/iintellidjent_alpha_without_workflow_builder.png
+[figure6]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/intellidjent_alpha_without_workflow_builder.png

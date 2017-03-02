@@ -74,8 +74,14 @@ Links the elementary Jenkins module jobs together in a workflow that builds the 
 
 This will contain all of the important project logic for deciding the reactive build pipeline.
 
+
+#### Current Architecture Mockup
+
+![figure6]
+
 [plain]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test.png
 [figure2]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_one_node_with_two_sources.png
 [figure3]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_with_dev_2_colors.png
 [figure4]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/Jenkins-Reaction.png
 [figure5]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_with_dev_colors.png
+[figure6]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/intellidjent_alpha_without_workflow_builder.png

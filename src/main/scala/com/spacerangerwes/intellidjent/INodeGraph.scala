@@ -84,7 +84,7 @@ object INodeGraph extends App {
     collapseMultiModuleINodeMap(iNodeKeyMap)
   }
 
-  iNodeKeyMap = createKeyMap("/Users/wesleyhoffman/IdeaProjects/")
+  iNodeKeyMap = createKeyMap("/Users/wh035505/Repositories")
 
 
   val edgePairs: List[(String, String)] = iNodeKeyMap.map(k => getEdges(k._1,k._2)).toList.flatten
@@ -92,7 +92,7 @@ object INodeGraph extends App {
 
   val srwEdges = edgePairs
     .filter{ pair =>
-      pair._1.contains("com.spacerangerwes") && pair._2.contains("com.spacerangerwes")
+      pair._1.contains("com.cerner.pophealth.analytics") && pair._2.contains("com.cerner.pophealth.analytics")
     }
     .map{ pair =>
       pair.swap._1~>pair.swap._2
@@ -119,7 +119,7 @@ object INodeGraph extends App {
   /**
     * Test scala-graph methods for future implementations
     */
-  val someMiddleNode: srwGraph.NodeT = srwGraph get "com.spacerangerwes.intellidjent.maven-graph-node-four"
+  val someMiddleNode: srwGraph.NodeT = srwGraph get "com.cerner.pophealth.analytics.analytics-transformation-populous"
   val x = getDirectAncestry(someMiddleNode)
   val y = getAllDescendants(someMiddleNode)
   println(x)

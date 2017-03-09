@@ -10,7 +10,7 @@ import org.eclipse.egit.github.core.client.GitHubClient
 import org.eclipse.egit.github.core.service.RepositoryService
 import org.kohsuke.github.{GHContent, GHRepository, GitHub, PagedIterable}
 
-import scala.collection.parallel.mutable
+import scala.collection.parallel.{ParMap, mutable}
 
 
 /**
@@ -28,38 +28,29 @@ case class GithubOrgRetriever(apiUrl: String, userName: String, password: String
     gitHub.getOrganization(name).listRepositories().asScala.toList
   }
 
-  def repositoryPoms(repoList: List[GHRepository], pomName: String): mutable.ParHashMap[GHContent,String] = {
-    val pomMap = mutable.ParHashMap.empty[GHContent, String]
-    repoList.foreach{ repo =>
-      repo.getDirectoryContent("").forEach{ dir =>
-        if(dir.getName == pomName) pomMap += (dir -> repo.getName)
-      }
-    }
-    pomMap
+  def searchOrg(org: String, searchItem: String): List[(String, GHContent)] = {
+    val contentList = gitHub.searchContent.user(org).filename(searchItem).list.asScala.toList
+    contentList.map{ content =>
+      (content.getOwner.getName concat content.getPath.replaceAll("""[^a-zA-Z\d\.]""",""), content)
+    }.filter(_._1.endsWith("xml"))
   }
 
-  def directoryContents(dirContent: GHContent, repoName: String): mutable.ParHashMap[GHContent, String] = {
-    val pomMap = mutable.ParHashMap.empty[GHContent, String]
-    if(dirContent.isDirectory) {
-      val subDirectories = dirContent.listDirectoryContent().asList().asScala
-      val mapSeq: Seq[mutable.ParHashMap[GHContent, String]] = subDirectories.map(sd => directoryContents(sd, repoName))
-      mapSeq.reduce(_ ++ _)
-    }else{
-      pomMap += (dirContent -> repoName)
+  def writeMapToFiles(pomMap: Map[String, GHContent]): Unit = {
+    pomMap.foreach{ pair =>
+      val in = scala.io.Source.fromInputStream(pair._2.read)
+      val output = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("pom_collection/" + pair._1)))
+      in.getLines().foreach(line => output.write(line))
+      output.close()
+      in.close()
     }
   }
+
 }
 
 object Test extends App {
   val retriever: GithubOrgRetriever = GithubOrgRetriever("https://github.cerner.com/api/v3", "", "")
   val repoList: List[GHRepository] = retriever.orgRepositories("")
   val pomName: String = "pom.xml"
-  val pomMap: mutable.ParHashMap[GHContent, String] = retriever.repositoryPoms(repoList,pomName)
-  pomMap.foreach{ pair =>
-    val fileName: String = List(pair._2, pair._1.getPath).mkString("-")
-    val in = scala.io.Source.fromInputStream(pair._1.read)
-    val output = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName)))
-    in.getLines().foreach(line => output.write(line))
-    output.close()
-  }
+  val pomMap: Map[String, GHContent] = retriever.searchOrg("", pomName).toMap
+  retriever.writeMapToFiles(pomMap)
 }

@@ -16,7 +16,7 @@ object LocalPomRetriever {
 
   def findLocalPoms(filePath: File): Array[File] = {
     val fileArr: Array[File] = getRecursiveListOfFiles(filePath)
-    fileArr.filter(_.getName.toLowerCase.contains("pom.xml"))
+    fileArr.filter(_.getName.toLowerCase.endsWith("pom.xml"))
   }
 
   def pomToINode(filePath: String): Array[INode] = {

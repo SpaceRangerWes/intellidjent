@@ -25,11 +25,7 @@ object INodeGraph extends App {
   var dependencyModuleMap: Map[String, String] = Map()
 
   def createKey(iNode: INode): String = {
-    List(iNode.groupId.get.text, iNode.artifactId.get.text).mkString(".")
-  }
-
-  def createKey(str1: String, str2: String): String = {
-    List(str1, str2).mkString(".")
+    iNode.artifactId.get.text
   }
 
   def getEdges(string: String, iNode: INode): Seq[(String, String)] = {
@@ -40,9 +36,9 @@ object INodeGraph extends App {
         iNode.dependencies.get.map{ dep =>
           val groupId = (dep \ "groupId").text
           val artifactId = (dep \ "artifactId").text
-          val key = createKey(groupId,artifactId)
+          val key = artifactId
           if(dependencyModuleMap.contains(key)) (string, dependencyModuleMap(key))
-          else (string, createKey(groupId,artifactId))
+          else (string, artifactId)
         }
       )
     }
@@ -51,7 +47,7 @@ object INodeGraph extends App {
         iNode.parent.get.map{ p =>
           val groupId = (p \ "groupId").text
           val artifactId = (p \ "artifactId").text
-          (string, createKey(groupId,artifactId))
+          (string, artifactId)
         }
       )
     }
@@ -63,7 +59,7 @@ object INodeGraph extends App {
     tempCopyMap.foreach{ pair =>
       if(pair._2.children.isSuccess){
         pair._2.children.get.foreach{ (child: Node) =>
-          val childKey: String = List(pair._2.groupId.get.text, child.text).mkString(".")
+          val childKey: String = child.text.stripSuffix("/%s".format("pom.xml"))
           val childINode: INode = tempCopyMap(childKey)
           tempCopyMap(pair._1).appendNodeDependencies(childINode)
           tempCopyMap -= childKey
@@ -84,7 +80,8 @@ object INodeGraph extends App {
     collapseMultiModuleINodeMap(iNodeKeyMap)
   }
 
-  iNodeKeyMap = createKeyMap("/Users/wh035505/Repositories")
+  iNodeKeyMap = createKeyMap("")
+  iNodeKeyMap.foreach(println)
 
 
   val edgePairs: List[(String, String)] = iNodeKeyMap.map(k => getEdges(k._1,k._2)).toList.flatten
@@ -92,7 +89,7 @@ object INodeGraph extends App {
 
   val srwEdges = edgePairs
     .filter{ pair =>
-      pair._1.contains("com.cerner.pophealth.analytics") && pair._2.contains("com.cerner.pophealth.analytics")
+      pair._1.contains("analytics") && pair._2.contains("analytics")
     }
     .map{ pair =>
       pair.swap._1~>pair.swap._2
@@ -119,7 +116,7 @@ object INodeGraph extends App {
   /**
     * Test scala-graph methods for future implementations
     */
-  val someMiddleNode: srwGraph.NodeT = srwGraph get "com.cerner.pophealth.analytics.analytics-transformation-populous"
+  val someMiddleNode: srwGraph.NodeT = srwGraph get "analytics-transformation-populous"
   val x = getDirectAncestry(someMiddleNode)
   val y = getAllDescendants(someMiddleNode)
   println(x)

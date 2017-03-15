@@ -48,7 +48,7 @@ case class GithubOrgRetriever(apiUrl: String, userName: String, password: String
 }
 
 object Test extends App {
-  val retriever: GithubOrgRetriever = GithubOrgRetriever("https://github.cerner.com/api/v3", "", "")
+  val retriever: GithubOrgRetriever = GithubOrgRetriever("https://github.cerner.com/api/v3", "wh035505", "Grand_Teton")
   val repoList: List[GHRepository] = retriever.orgRepositories("")
   val pomName: String = "pom.xml"
   val pomMap: Map[String, GHContent] = retriever.searchOrg("", pomName).toMap

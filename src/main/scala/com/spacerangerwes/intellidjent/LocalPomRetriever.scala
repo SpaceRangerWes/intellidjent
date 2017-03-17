@@ -10,7 +10,7 @@ import com.spacerangerwes.INode
 object LocalPomRetriever {
 
   def getRecursiveListOfFiles(dir: File): Array[File] = {
-    val these = dir.listFiles
+    val these: Array[File] = dir.listFiles
     these ++ these.filter(_.isDirectory).flatMap(getRecursiveListOfFiles)
   }
 
@@ -23,6 +23,6 @@ object LocalPomRetriever {
     val rootDir = new File(filePath)
     val pomList = findLocalPoms(rootDir)
 
-    pomList.map{ pom => new INode(pom)}
+    pomList.map{ pom => INode(pom)}
   }
 }

@@ -5,12 +5,12 @@ import java.util
 
 import sys.process._
 import com.spacerangerwes.INode
-import com.spacerangerwes.intellidjent.INodeGraph.srwGraph
 
 import scalax.collection.GraphPredef._
 import scalax.collection.{Graph, GraphTraversal}
 import scalax.collection.io.dot._
 import implicits._
+import scala.collection.immutable.Iterable
 import scala.collection.{immutable, mutable}
 import scala.xml.Node
 import scalax.collection.GraphEdge.DiEdge
@@ -19,10 +19,27 @@ import scalax.collection.GraphEdge.DiEdge
   * Created by wesleyhoffman on 3/1/17.
   */
 
-object INodeGraph extends App {
+case class INodeGraph(filePath: String, searchKey: String) {
 
-  var iNodeKeyMap: Map[String,INode] = Map()
-  var dependencyModuleMap: Map[String, String] = Map()
+  val iNodeKeyMap: Map[String,INode] = createKeyMap(filePath)._1
+  val dependencyModuleMap: Map[String, String] = createKeyMap(filePath)._2
+
+  def generateGraph(): Graph[String, DiEdge] = {
+    val edgePairs: List[(String, String)] = iNodeKeyMap.map(k => getEdges(k._1,k._2)).toList.flatten
+    val edges = edgePairs
+      .filter{ pair =>
+        pair._1.contains(searchKey) && pair._2.contains(searchKey)
+      }
+      .filterNot{ pair =>
+        pair._1 == pair._2
+      }
+      .map{ pair =>
+        pair.swap._1~>pair.swap._2
+      }
+    val nodes = iNodeKeyMap.keys
+
+    Graph.from(nodes, edges)
+  }
 
   def createKey(iNode: INode): String = {
     iNode.artifactId.get.text
@@ -52,6 +69,36 @@ object INodeGraph extends App {
     dependencies.get ++ parent.get
   }
 
+  def createKeyMap(string: String): (Map[String, INode], Map[String, String]) = {
+    val iNodeArr: Array[INode] = LocalPomRetriever.pomToINode(string)
+    collapseMultiModuleINodeMap(
+      iNodeArr.map{ node =>
+        createKey(node) -> node
+      }.toMap)
+  }
+
+  def collapseMultiModuleINodeMap(iNodeKeyMap: Map[String, INode]): (Map[String, INode], Map[String, String]) = {
+    var tempCopyMap: Map[String, INode] = iNodeKeyMap
+    val moduleMap: Map[String, String] = tempCopyMap.map { (pair: (String, INode)) =>
+      createDependencyModuleMap(pair._1, pair._2)
+    }.reduce(_ ++ _)
+
+    moduleMap.foreach{ childParentKeyPair =>
+      val childINode: INode = tempCopyMap(childParentKeyPair._1)
+      tempCopyMap(childParentKeyPair._2).appendNodeDependencies(childINode)
+      tempCopyMap -= childParentKeyPair._1
+    }
+    (tempCopyMap, moduleMap)
+  }
+
+  def createDependencyModuleMap(key: String, value: INode): Map[String, String] = {
+    if (value.children.isFailure) return Map.empty
+
+    value.children.get.map{ (child: Node) =>
+      val childKey: String = child.text.stripSuffix("/%s".format("pom.xml"))
+      childKey -> key
+    }.toMap
+  }
 
   /**
     * Generate GraphX of the dependency DAG
@@ -69,72 +116,18 @@ object INodeGraph extends App {
     "dot -Tpng %s.dot -o %s.png".format(fileName, fileName) !
   }
 
-  def collapseMultiModuleINodeMap(iNodeKeyMap: Map[String, INode]): Map[String, INode] = {
-    var tempCopyMap: Map[String, INode] = iNodeKeyMap
-    tempCopyMap.foreach{ pair =>
-      if(pair._2.children.isSuccess){
-        pair._2.children.get.foreach{ (child: Node) =>
-          val childKey: String = child.text.stripSuffix("/%s".format("pom.xml"))
-          val childINode: INode = tempCopyMap(childKey)
-          tempCopyMap(pair._1).appendNodeDependencies(childINode)
-          tempCopyMap -= childKey
-          dependencyModuleMap += (childKey -> pair._1)
-        }
-      }
+  def rootToLeafSubGraph(graph: Graph[String, DiEdge], nodeNames: String*): Graph[String, DiEdge] = {
+    val nodeSeq: Seq[graph.NodeT] = nodeNames.map(graph get _)
+    val subGraphSetSeq: Seq[Set[Graph[String, DiEdge]#NodeT]] = nodeSeq.map{ node =>
+      getDirectAncestry(node) ++ getAllDescendants(node) ++ Set(node)
     }
-    tempCopyMap
+    val subGraphSeq: Seq[Graph[String, DiEdge]] = subGraphSetSeq.map{ nodeSet =>
+      graph filter graph.having(node = nodeSet.contains(_))
+    }
+
+    subGraphSeq.reduce(_ union _)
   }
 
-  def createKeyMap(string: String): Map[String,INode] = {
-    LocalPomRetriever
-      .pomToINode(string)
-      .foreach{ node =>
-        iNodeKeyMap += (createKey(node) -> node)
-      }
-
-    collapseMultiModuleINodeMap(iNodeKeyMap)
-  }
-
-  iNodeKeyMap = createKeyMap("/Users/wh035505/Repositories/my_sandbox/intellidjent/pom_collection")
-
-
-  val edgePairs: List[(String, String)] = iNodeKeyMap.map(k => getEdges(k._1,k._2)).toList.flatten
-
-
-  val srwEdges = edgePairs
-    .filter{ pair =>
-      pair._1.contains("analytics") && pair._2.contains("analytics")
-    }
-    .map{ pair =>
-      pair.swap._1~>pair.swap._2
-    }
-  val srwNodes = iNodeKeyMap.keys
-  val srwGraph: Graph[String, DiEdge] = Graph.from(srwNodes, srwEdges)
-
-  writeToDot(srwGraph,"fullGraph")
-  /**
-    * Test scala-graph methods for future implementations
-    */
-  val someMiddleNode: srwGraph.NodeT = srwGraph get "analytics-transformation-populous"
-  val subGraphSet: Set[Graph[String, DiEdge]#NodeT] = getDirectAncestry(someMiddleNode) ++ getAllDescendants(someMiddleNode) ++ Set(someMiddleNode)
-  val subGraph: Graph[String, DiEdge] = srwGraph filter srwGraph.having(node = subGraphSet.contains(_))
-  writeToDot(subGraph, "trans-pop-build-graph")
-
-
-
-  val someMiddleNode2: srwGraph.NodeT = srwGraph get "analytics-transformation-kpi"
-  val subGraphSet2: Set[Graph[String, DiEdge]#NodeT] = getDirectAncestry(someMiddleNode2) ++ getAllDescendants(someMiddleNode2) ++ Set(someMiddleNode2)
-  val subGraph2: Graph[String, DiEdge] = srwGraph filter srwGraph.having(node = subGraphSet2.contains(_))
-  writeToDot(subGraph2, "trans-kpi-build-graph")
-
-
-  val subUnion: Graph[String, DiEdge] = subGraph union subGraph2
-  writeToDot(subUnion, "trans-pop-and-kpi-union")
-  /**
-    * Helper method for getDirectAncestry
-    * @param node
-    *             A Graph[String, DiEdge]#NodeT object
-    */
   def getDirectAncestry(node: Graph[String, DiEdge]#NodeT): Set[Graph[String, DiEdge]#NodeT] = {
     if (node.diPredecessors.nonEmpty) {
       node.diPredecessors ++ node.diPredecessors.flatMap(getDirectAncestry)

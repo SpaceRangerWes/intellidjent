@@ -6,7 +6,7 @@ import scala.util.{Failure, Success, Try}
 import scala.xml.{Elem, Node, NodeSeq, XML}
 
 
-class INode(xmlPath: File) {
+case class INode(xmlPath: File) {
   val xml: Elem = XML.loadFile(xmlPath)
   val parent: Try[NodeSeq] = Try(xml \\ "parent")
   val children: Try[NodeSeq] = Try(xml \\ "modules" \ "module")
@@ -15,6 +15,7 @@ class INode(xmlPath: File) {
   val version: Try[NodeSeq] = Try(xml \ "version")
   val dependencyManagement: Try[NodeSeq] = Try(xml \\ "dependencyManagement")
   var dependencies: Try[NodeSeq] = Try(xml \\ "dependencies" \ "dependency")
+  var scmUrl: Try[NodeSeq] = Try(xml \\ "scm.url")
 
   def getGroupDependencies(groupId: String): Option[NodeSeq] = {
     if (dependencies.isFailure) None
@@ -27,6 +28,8 @@ class INode(xmlPath: File) {
   def appendNodeDependencies(iNode: INode): Unit = {
     dependencies = Try(dependencies.get ++ iNode.dependencies.get)
   }
+
+
 }
 
 

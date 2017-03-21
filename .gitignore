@@ -12,13 +12,19 @@ src_managed/
 project/boot/
 project/plugins/project/
 
-# Scala-IDE specific
-.scala_dependencies
-.worksheet
-
-# intellij specific
+# IDE specific
 .idea
 *.iml
+.scala_dependencies
+.worksheet
+.clover
 
 # Mac specific
 .DS_Store
+
+# Project specific
+*.dot
+*.png
+jenkinsPipeline.txt
+pom_collection/
+

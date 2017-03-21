@@ -24,6 +24,7 @@ import scala.xml.{Elem, Node, NodeSeq, XML}
 case class GithubOrgRetriever(apiUrl: String, userName: String, password: String) {
 
   val gitHub: GitHub = buildRetriever(apiUrl, userName, password)
+  var pomOutputDirectory: String = "pom_collection/"
 
   def buildRetriever(apiUrl: String, userName: String, password: String): GitHub = {
     GitHub.connectToEnterprise(apiUrl, userName, password)
@@ -40,30 +41,20 @@ case class GithubOrgRetriever(apiUrl: String, userName: String, password: String
     }.filter(_._1.endsWith("xml"))
   }
 
+  def setOutputDirectory(pomOutputDirectory: String): Unit = {
+    this.pomOutputDirectory = pomOutputDirectory
+  }
+
   def writeMapToFiles(pomMap: Map[String, GHContent]): Map[String, String] = {
     pomMap.map{ pair =>
       val in = scala.io.Source.fromInputStream(pair._2.read)
-      val output = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("pom_collection/" + pair._1)))
+      val output = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(pomOutputDirectory + pair._1)))
       in.getLines().foreach(line => output.write(line))
       output.close()
       in.close()
 
-      val outputFile: File = new File("pom_collection/" + pair._1)
+      val outputFile: File = new File(pomOutputDirectory + pair._1)
       var uglyXml: Elem = XML.loadFile(outputFile)
-
-      def toBeAddedEntry(url: String) = <scm.url>{url}</scm.url>
-      def addScmUri(originalXML: Elem, url: String) = {
-        originalXML match {
-          case e @ Elem(_, _, _, _, configs @ _*) =>
-            val changedNodes = configs.map {
-              case <properties>{ innerConfigs @ _* }</properties> =>
-                <properties> { toBeAddedEntry(url) ++ innerConfigs }</properties>
-              case other => other
-            }
-            e.copy(child = changedNodes)
-          case _ => originalXML
-        }
-      }
 
       if (Try(uglyXml \\ "scm.url").isFailure) uglyXml = addScmUri(uglyXml, pair._2.getOwner.getHtmlUrl.toString)
 
@@ -75,12 +66,16 @@ case class GithubOrgRetriever(apiUrl: String, userName: String, password: String
     }
   }
 
-//  def assertScmUrl(xmlPath: String, scmUrl: String): Unit = {
-//    val xml: Elem = XML.loadFile(xmlPath)
-//
-//    if (xml.attribute("scm.url").isDefined) {
-//      xml.attribute("scm.url").get.text = scmUrl
-//    }
-//  }
-
+  def addScmUri(originalXML: Elem, url: String): Elem = {
+    originalXML match {
+      case e @ Elem(_, _, _, _, configs @ _*) =>
+        val changedNodes = configs.map {
+          case <properties>{ innerConfigs @ _* }</properties> =>
+            <properties> { <scm.url>{url}</scm.url> ++ innerConfigs }</properties>
+          case other => other
+        }
+        e.copy(child = changedNodes)
+      case _ => originalXML
+    }
+  }
 }

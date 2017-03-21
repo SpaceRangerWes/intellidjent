@@ -5,7 +5,6 @@ import java.io.File
 import com.spacerangerwes.INode
 import org.apache.commons.io.FileUtils
 
-import scala.collection.immutable.Iterable
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
 

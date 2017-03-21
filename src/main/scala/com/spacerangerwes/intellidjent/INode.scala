@@ -2,8 +2,8 @@ package com.spacerangerwes
 
 import java.io.File
 
-import scala.util.{Failure, Success, Try}
-import scala.xml.{Elem, Node, NodeSeq, XML}
+import scala.util.Try
+import scala.xml.{Elem, NodeSeq, XML}
 
 
 case class INode(xmlPath: File) {

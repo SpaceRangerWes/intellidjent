@@ -1,35 +1,53 @@
 package com.spacerangerwes.intellidjent
 
 import java.io._
-import java.nio.file.{Files, Paths}
-import java.util
 
 import org.apache.commons.io.FileUtils
 
 import scala.collection.JavaConverters._
-import org.eclipse.egit.github.core.Repository
-import org.eclipse.egit.github.core.client.GitHubClient
-import org.eclipse.egit.github.core.service.RepositoryService
-import org.kohsuke.github.{GHContent, GHRepository, GitHub, PagedIterable}
+import org.kohsuke.github.{GHContent, GHRepository, GitHub}
 
-import scala.collection.parallel.{ParMap, mutable}
 import scala.util.Try
-import scala.xml.transform.{RewriteRule, RuleTransformer}
-import scala.xml.{Elem, Node, NodeSeq, XML}
+import scala.xml.{Elem, XML}
 
 
 /**
-  * Created by wh035505 on 3/8/17.
+  * Github Utility that communicates to the Github 3.0 API and retains the organization object that can be used for
+  * retrieving POM files from the Github servers
+  * @param apiUrl
+  *               url of the enterprise github url
+  * @param userName
+  *                 username required for enterprise github account
+  * @param password
+  *                 password required for enterprise github account
   */
 case class GithubOrgRetriever(apiUrl: String, userName: String, password: String) {
 
   val gitHub: GitHub = buildRetriever(apiUrl, userName, password)
   var pomOutputDirectory: String = "pom_collection/"
 
+  /**
+    * Construct the retriever value
+    * @param apiUrl
+    *               url of the enterprise github url
+    * @param userName
+    *                 username required for enterprise github account
+    * @param password
+    *                 password required for enterprise github account
+    * @return
+    *         GitHub
+    */
   def buildRetriever(apiUrl: String, userName: String, password: String): GitHub = {
     GitHub.connectToEnterprise(apiUrl, userName, password)
   }
 
+  /**
+    * List of all repositories belonging to a Github Organization
+    * @param name
+    *             name of the Organization
+    * @return
+    *         List[GHRepository]
+    */
   def orgRepositories(name: String): List[GHRepository] = {
     gitHub.getOrganization(name).listRepositories().asScala.toList
   }
@@ -41,10 +59,24 @@ case class GithubOrgRetriever(apiUrl: String, userName: String, password: String
     }.filter(_._1.endsWith("xml"))
   }
 
+  /**
+    * Setter for the download location of the collected POM files
+    *
+    * Default Value: ./pom_collection/
+    * @param pomOutputDirectory
+    *                           directory path to save files to
+    */
   def setOutputDirectory(pomOutputDirectory: String): Unit = {
     this.pomOutputDirectory = pomOutputDirectory
   }
 
+  /**
+    * Write the map containing POM contents to files in a download directory
+    * @param pomMap
+    *               map of unique POM file identifier and the POM file's contents
+    * @return
+    *         Map[String, String]
+    */
   def writeMapToFiles(pomMap: Map[String, GHContent]): Map[String, String] = {
     pomMap.map{ pair =>
       val in = scala.io.Source.fromInputStream(pair._2.read)
@@ -66,6 +98,15 @@ case class GithubOrgRetriever(apiUrl: String, userName: String, password: String
     }
   }
 
+  /**
+    * Add XML tag for the POM's Github URL if one is not present
+    * @param originalXML
+    *                    unedited POM contents
+    * @param url
+    *            url of Github repository that POM belongs to
+    * @return
+    *         Elem
+    */
   def addScmUri(originalXML: Elem, url: String): Elem = {
     originalXML match {
       case e @ Elem(_, _, _, _, configs @ _*) =>

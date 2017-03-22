@@ -3,7 +3,6 @@ package com.spacerangerwes.intellidjent
 import java.io.PrintWriter
 
 import sys.process._
-import com.spacerangerwes.INode
 
 import scalax.collection.GraphPredef._
 import scalax.collection.Graph

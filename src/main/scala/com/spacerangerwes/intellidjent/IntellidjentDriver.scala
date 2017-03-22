@@ -1,13 +1,12 @@
 package com.spacerangerwes.intellidjent
 
-import com.spacerangerwes.INode
-import org.kohsuke.github.{GHContent, GHRepository}
+import org.kohsuke.github.GHContent
 
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
 
 /**
-  * Created by wh035505 on 3/15/17.
+  * App to create an Intellidjent Pipeline
   */
 object IntellidjentDriver extends App {
   val retriever: GithubOrgRetriever = GithubOrgRetriever("https://github.cerner.com/api/v3", "", "")
@@ -24,7 +23,7 @@ object IntellidjentDriver extends App {
 
   iNodeGraph.writeToDot(subGraph, "subgraph")
 
-  val orderMap: Map[String, (Option[Int], Option[INode])] = JenkinsPipelineBuilder.pipelineFromDiGraph(subGraph, iNodeGraph.iNodeKeyMap)
+  val orderMap: Map[String, (Option[Int], Option[INode])] = JenkinsPipelineBuilder.pipelineMapFromDiGraph(subGraph, iNodeGraph.iNodeKeyMap)
 
   val jenkinsPipeline: String = JenkinsPipelineBuilder.createPipeline(orderMap)
   JenkinsPipelineBuilder.writeToFile(jenkinsPipeline, "jenkinsPipeline.txt")

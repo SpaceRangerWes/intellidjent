@@ -1,42 +1,50 @@
-# intellidjent
+# intellidjent (Rhythmic Development Automation)
 ###### An intelligent Maven Workflow Generator for Jenkins and CI
 
 
 ## Presenting the Problem
 
-This project is to simplify the act of creating Continuous Integration tests for large and complex maven build situations.
+* Simplify the act of creating Continuous Integration (CI) tests for large and complex Maven module situations
+* Guarantee that all affected modules are tested
+* Guarantee an isolated development environment to reduce inter-engineer
+conflicts
 
-Let's look at the simple example DAG (Directed Acyclic Graph) given below in *figure 1*
+#### Example
+A dependency graph that has 14 Github Repositories that contain 1 or more Maven modules. Each of the leaves is a processing module that will be packaged as a shaded jar to be sent to Hadoop. intellidjent has to understand the module graph structure and return a workflow representation that Jenkins can process.
 
-Figure 1
-![plain]
-
-**Note**: *When a node in the DAG is not colored, assume it is a master build of the component.*
+If it is assumed that this graph given is a cohesive tech stack then all 14 nodes will need to build continuously for our Stable builds.
+Intellidjent, alpha version, will build our Stable stack in sequential order by following a topological sorted order (i.e. 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 13 -> 11 -> 12)
 
 In *figure 1* we are shown a dependency graph that has 14 Maven modules (assume they are in separate repositories) and each of the leaves (a node with no outgoing edges is a leaf. *i.e. node 6, 7, 9, etc*) is a processing module that requires all of its 3rd-party dependencies and ancestor/parent modules packaged into a [shaded jar](https://maven.apache.org/plugins/maven-shade-plugin/). These processing modules will be assumed to to run on some distributed framework like Spark, Flume, Hadoop, etc. The question for our Stable Dev builds is simply "how do we segment this DAG into discrete build jobs for each processing module?"
 
-#### Partitioning Build Paths and Reduce Duplicating builds
+Figure 1
 
-This section is two-fold. At least 7 Jenkins jobs need to be dynamically generated in *figure 1* for each of the processing modules 6, 7, and 9-12. However if we build the path `0 -> 1 -> 2 -> 3` seven times, we are repeating a lot of work, consuming more compute time and resources, and creating new SNAPSHOT versions each time we build that path for each module.
-```
-Step 1: Each maven module/repository should have its own elementary Jenkins/CI build definition that configures the commands to be run and the setup of the container environment for building that single repository.
+![figure1]
 
-Step 2: A master Jenkins/CI job contains the run logic for ordering builds, defining consumed and emitted versions, and any other customized parameters.
-```
-
-The purpose for partitioning build paths is any case that an isolated branch needs to be ran. A good example would be if the *master* branch was just updated on **module 8**. In that case **module 8** can consume the last master SNAPSHOT of **module 3** and the paths `8->13`, `8->11`, and `8->12` are in their own reactive build.
 
 #### SNAPSHOT Conflicts Of Interest
+<br>
+##### There are two important questions to ask
 
-If each module pulls in the latest snapshot build of its dependencies, there must be a guarantee that master builds are always consuming master builds of dependencies and not a remote development test. This is because the accidental consumption of development code may present a false-negative when running continuous testing against code that is assumed to be stable. *Figure 2* shows one of these situations.
+What happens when I’m developing on repository 2 and a fellow engineer is developing on repository 0?
+
+Will I consume their development builds that are considered unstable or will I be consuming the latest code from master that is considered stable?
+
+##### Option 1
+She could have isolated her snapshot (unique snapshot identifier that I can’t consume unless I purposely try). Because she isolated her module version, I won’t consume her changes. But we can’t guarantee every engineer will be as proactive.
+
+##### Option 2
+She could have left the version of repository 0 in her dev branch as X.X.X-Master-Snapshot. Not good news for me because I’m now going to consume her development code from a build 5 minutes ago compared to a true Master branch build from 10 minutes. This is why each developer should have an isolated environment when building versions that will ultimately be hosted on the remote Maven SNAPSHOT repository.
 
 Figure 2
+
 ![figure2]
 
-Because **module 2** states that it wants to consume the latest development build of **module 0** in the form of `<artifact>version-SNAPSHOT</artifact>`, if the timestamp of **dev-snapshot** is more recent than **master-snapshot** and they are both of version *v*, then **dev-snapshot** will be included in **module 2** and all consuming descendants. Hopefully you can see the problem this causes. Therefore, a Jenkins build of **module 2** must configure and validate that all ancestors are exclusively master builds.
+**To reiterate:** Because **module 2** states that it wants to consume the latest development build of **module 0** in the form of `<artifact>version-SNAPSHOT</artifact>`, if the timestamp of **dev-snapshot** is more recent than **master-snapshot** and they are both of version *v*, then **dev-snapshot** will be included in **module 2** and all consuming descendants. Hopefully you can see the problem this causes. Therefore, a Jenkins build of **module 2** must configure and validate that all ancestors are exclusively master builds.
 
 #### Development Situation One
 Figure 3
+
 ![figure3]
 
 If a developer is working sufficiently close to the top of the tech stack (a leaf is the top in this case), then the only modules that need to be added to a workflow is itself and its descendants. In *figure 3* **module 5** is the only module with a dev change for this example JIRA task. *intellidjent* will create a workflow that ingests master SNAPSHOTs as **module 5** and **module 10's** ancestors and create an isolated development SNAPSHOT of **module 5** and **module 10** so that other intellidjent workflows are not aware of the development changes being made. Focusing on `3 -> 5 -> 10`, the reactive build looks like *figure 4* below.
@@ -50,38 +58,25 @@ Figure 4
 
 #### Development Situation Two
 Figure 5
+
 ![figure5]
 
 If a developer is working near the root of the maven ancestry or across multiple modules, she must be aware of possible side-effects that can occur far away in the descendants. Passivity can only be guaranteed if all consumers are tested. This situation requires that all descendants of **module 1** are rebuilt with that new SNAPSHOT and proper integration testing is ran. At this point, the only module that is not isolated from master is **module 0**.
 
 
-## Project Components
-
-#### 1. Github Org Retrieval
-
-**Purpose:**
-Pull all Maven based projects and build full dependency graph of module repositories.
-
-#### 2. Elementary Jenkins Definition
-
-**Purpose:**
-Setup build environment, maven configuration, and other Jenkins node necessities.
-
-#### 3. intellidjent Jenkins Definition
-
-**Purpose:**
-Links the elementary Jenkins module jobs together in a workflow that builds the necessary Maven modules
-
-This will contain all of the important project logic for deciding the reactive build pipeline.
-
-
-#### Current Architecture Mockup
+## Project Architecture
 
 ![figure6]
 
-[plain]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test.png
+
+## Flowchart For an Engineer to Follow When Using intellidjent
+
+![figure7]
+
+[figure1]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test.png
 [figure2]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_one_node_with_two_sources.png
 [figure3]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_with_dev_2_colors.png
 [figure4]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/Jenkins-Reaction.png
-[figure5]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/test_with_dev_colors.png
-[figure6]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/intellidjent_alpha_without_workflow_builder.png
+[figure5]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/situation_two.png
+[figure6]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/intellidjent_alpha.png
+[figure7]: https://raw.githubusercontent.com/SpaceRangerWes/intellidjent/master/docs/intellidjent_use_case_flowchart.png

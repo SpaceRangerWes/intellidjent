@@ -10,17 +10,17 @@ import scalax.collection.GraphEdge.DiEdge
   * Created by wh035505 on 3/15/17.
   */
 object IntellidjentDriver extends App {
-  val retriever: GithubOrgRetriever = GithubOrgRetriever("https://github.cerner.com/api/v3", "", "")
+  val retriever: GithubOrgRetriever = GithubOrgRetriever("http_github_v3_api_url", "username", "password")
   val pomName: String = "pom.xml"
-  val pomMap: Map[String, GHContent] = retriever.searchOrg("", pomName).toMap
+  val pomMap: Map[String, GHContent] = retriever.searchOrg("organization_name", pomName).toMap
   val nameUrlMap: Map[String, String] = retriever.writeMapToFiles(pomMap)
 
-  val iNodeGraph: INodeGraph = INodeGraph("", "")
+  val iNodeGraph: INodeGraph = INodeGraph("pom_collection/", "search_key")
   val graph: Graph[String, DiEdge] = iNodeGraph.generateGraph()
 
   iNodeGraph.writeToDot(graph, "fullgraph")
 
-  val subGraph: Graph[String, DiEdge] = iNodeGraph.rootToLeafSubGraph(graph, "", "")
+  val subGraph: Graph[String, DiEdge] = iNodeGraph.rootToLeafSubGraph(graph, "repository_name", "repository_name")
 
   iNodeGraph.writeToDot(subGraph, "subgraph")
 

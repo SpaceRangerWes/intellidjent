@@ -38,7 +38,7 @@ case class GithubOrgRetriever(apiUrl: String, userName: String, password: String
     val contentList = gitHub.searchContent.user(org).filename(searchItem).list.asScala.toList
     contentList.map{ content =>
       (content.getOwner.getName concat content.getPath.replaceAll("""[^a-zA-Z\d\.]""",""), content)
-    }.filter(_._1.endsWith("xml"))
+    }.filter(_._1.endsWith("pom.xml"))
   }
 
   def setOutputDirectory(pomOutputDirectory: String): Unit = {

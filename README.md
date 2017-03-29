@@ -23,7 +23,8 @@ Figure 1
 
 
 #### SNAPSHOT Conflicts Of Interest
-<br/>
+
+
 ##### There are two important questions to ask
 
 What happens when I’m developing on repository 2 and a fellow engineer is developing on repository 0?
